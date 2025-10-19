@@ -13,7 +13,7 @@ if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 
 # Use the production database URL if available, otherwise fall back to local SQLite
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///store.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url or f"sqlite:///{os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'store.db')}"
 db = SQLAlchemy(app)
 CORS(app)
 
@@ -51,6 +51,9 @@ class CartItem(db.Model):
             'product': self.product.to_dict(),
             'quantity': self.quantity
         }
+
+with app.app_context():
+    db.create_all()
 
 @app.route('/api/register', methods=['POST'])
 def register():

@@ -17,6 +17,8 @@ inventory = [
 
 with app.app_context():
     db.create_all()
+    # Clear existing data
+    Product.query.delete()
     for category in inventory:
         for product_data in category['products']:
             product = Product(
