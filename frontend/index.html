@@ -163,6 +163,35 @@
         .notification.show {
             opacity: 1;
         }
+        #product-filters {
+            padding: 0 20px 20px 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        #product-filters input,
+        #product-filters select {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+        #product-filters input {
+            flex-grow: 1;
+            max-width: 400px;
+        }
+        #product-filters button {
+            background-color: #5a67d8;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        #product-filters button:hover {
+            background-color: #434190;
+        }
     </style>
 </head>
 <body>
@@ -183,6 +212,13 @@
             </div>
         </div>
     </header>
+    <div id="product-filters">
+        <input type="text" id="search-input" placeholder="Search products...">
+        <select id="category-select">
+            <option value="">All Categories</option>
+        </select>
+        <button id="clear-filters">Clear Filters</button>
+    </div>
     <main>
         <div id="products"></div>
         <aside id="cart">
@@ -206,6 +242,9 @@
             const welcomeMessage = document.getElementById('welcome-message');
             const logoutBtn = document.getElementById('logout-btn');
             const notification = document.getElementById('notification');
+            const searchInput = document.getElementById('search-input');
+            const categorySelect = document.getElementById('category-select');
+            const clearFiltersBtn = document.getElementById('clear-filters');
             let currentUser = null;
 
             function showNotification(message) {
@@ -237,6 +276,10 @@
 
             function renderProducts(products) {
                 productsContainer.innerHTML = '';
+                if (products.length === 0) {
+                    productsContainer.innerHTML = '<p>No products found.</p>';
+                    return;
+                }
                 products.forEach(product => {
                     const productElement = document.createElement('div');
                     productElement.classList.add('product');
@@ -420,18 +463,55 @@
                     }
                 });
 
-            showLoader();
-            fetch('/api/products')
-                .then(response => response.json())
-                .then(data => {
-                    hideLoader();
-                    renderProducts(data);
-                })
-                .catch(error => {
-                    hideLoader();
-                    console.error('Error fetching products:', error);
-                    alert('Could not fetch products. Please try again later.');
-                });
+            function fetchProducts() {
+                showLoader();
+                const searchTerm = searchInput.value;
+                const category = categorySelect.value;
+                let url = `/api/products?`;
+                if (searchTerm) {
+                    url += `search=${searchTerm}&`;
+                }
+                if (category) {
+                    url += `category=${category}`;
+                }
+
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        hideLoader();
+                        renderProducts(data);
+                    })
+                    .catch(error => {
+                        hideLoader();
+                        console.error('Error fetching products:', error);
+                        showNotification('Could not fetch products. Please try again later.');
+                    });
+            }
+
+            function fetchCategories() {
+                fetch('/api/categories')
+                    .then(response => response.json())
+                    .then(categories => {
+                        categories.forEach(category => {
+                            const option = document.createElement('option');
+                            option.value = category;
+                            option.textContent = category;
+                            categorySelect.appendChild(option);
+                        });
+                    });
+            }
+
+            searchInput.addEventListener('input', fetchProducts);
+            categorySelect.addEventListener('change', fetchProducts);
+
+            clearFiltersBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                categorySelect.value = '';
+                fetchProducts();
+            });
+
+            fetchProducts();
+            fetchCategories();
         });
     </script>
 </body>
