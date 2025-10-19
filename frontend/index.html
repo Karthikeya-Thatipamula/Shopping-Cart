@@ -115,9 +115,27 @@
         #auth button:hover {
             background-color: #434190;
         }
+        .loader {
+            border: 16px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 16px solid #5a67d8;
+            width: 120px;
+            height: 120px;
+            animation: spin 2s linear infinite;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin-top: -60px;
+            margin-left: -60px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
+    <div class="loader" id="loader"></div>
     <header>
         <h1>ShopSphere</h1>
         <div id="auth">
@@ -144,7 +162,16 @@
             const passwordInput = document.getElementById('password');
             const loginBtn = document.getElementById('login-btn');
             const registerBtn = document.getElementById('register-btn');
+            const loader = document.getElementById('loader');
             let userId = null;
+
+            function showLoader() {
+                loader.style.display = 'block';
+            }
+
+            function hideLoader() {
+                loader.style.display = 'none';
+            }
 
             function renderProducts(products) {
                 productsContainer.innerHTML = '';
@@ -173,14 +200,22 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ user_id: userId, product_id: product.id, quantity: 1 })
-                }).then(() => fetchCart());
+                }).then(() => fetchCart())
+                .catch(error => {
+                    console.error('Error adding to cart:', error);
+                    alert('Could not add to cart. Please try again later.');
+                });
             }
 
             function fetchCart() {
                 if (!userId) return;
                 fetch(`/api/cart?user_id=${userId}`)
                     .then(response => response.json())
-                    .then(data => renderCart(data));
+                    .then(data => renderCart(data))
+                    .catch(error => {
+                        console.error('Error fetching cart:', error);
+                        alert('Could not fetch cart. Please try again later.');
+                    });
             }
 
             function renderCart(cart) {
@@ -215,6 +250,10 @@
                     } else {
                         alert('Login failed');
                     }
+                })
+                .catch(error => {
+                    console.error('Error logging in:', error);
+                    alert('Could not log in. Please try again later.');
                 });
             });
 
@@ -225,12 +264,25 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
-                }).then(() => alert('Registration successful. Please log in.'));
+                }).then(() => alert('Registration successful. Please log in.'))
+                .catch(error => {
+                    console.error('Error registering:', error);
+                    alert('Could not register. Please try again later.');
+                });
             });
 
+            showLoader();
             fetch('/api/products')
                 .then(response => response.json())
-                .then(data => renderProducts(data));
+                .then(data => {
+                    hideLoader();
+                    renderProducts(data);
+                })
+                .catch(error => {
+                    hideLoader();
+                    console.error('Error fetching products:', error);
+                    alert('Could not fetch products. Please try again later.');
+                });
         });
     </script>
 </body>
