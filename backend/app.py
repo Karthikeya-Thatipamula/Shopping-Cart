@@ -2,7 +2,6 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
-import os
 
 app = Flask(__name__, static_folder='../frontend')
 import os
