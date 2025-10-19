@@ -5,17 +5,15 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import os
 
 app = Flask(__name__, static_folder='../frontend')
-# Retrieve the database URL from the environment (e.g., Render's DATABASE_URL)
+import os
+
 database_url = os.environ.get('DATABASE_URL')
+# Render's DATABASE_URL starts with postgres://, but SQLAlchemy needs postgresql://
 if database_url and database_url.startswith("postgres://"):
-    # Render's DATABASE_URL starts with postgres://, but SQLAlchemy needs postgresql://
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 
 # Use the production database URL if available, otherwise fall back to local SQLite
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///store.db'
-
-# Additional settings
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Disable unnecessary track modifications warning
 db = SQLAlchemy(app)
 CORS(app)
 
