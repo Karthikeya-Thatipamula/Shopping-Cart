@@ -1,4 +1,4 @@
-from app import app, db, Product
+from app import app, db, Product, CartItem, User
 
 inventory = [
     {"category": "Fruit", "products": [
@@ -18,7 +18,11 @@ inventory = [
 with app.app_context():
     db.create_all()
     # Clear existing data
+    CartItem.query.delete()
+    User.query.delete()
     Product.query.delete()
+    db.session.commit()
+
     for category in inventory:
         for product_data in category['products']:
             product = Product(
