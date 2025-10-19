@@ -94,8 +94,23 @@ def get_current_user():
 
 @app.route('/api/products', methods=['GET'])
 def get_products():
-    products = Product.query.all()
+    query = Product.query
+    search_term = request.args.get('search')
+    category = request.args.get('category')
+
+    if search_term:
+        query = query.filter(Product.name.ilike(f'%{search_term}%'))
+
+    if category:
+        query = query.filter(Product.category == category)
+
+    products = query.all()
     return jsonify([product.to_dict() for product in products])
+
+@app.route('/api/categories', methods=['GET'])
+def get_categories():
+    categories = db.session.query(Product.category).distinct().all()
+    return jsonify([category[0] for category in categories])
 
 @app.route('/api/cart', methods=['GET'])
 @login_required
