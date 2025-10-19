@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShopSphere</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f8;
+            color: #333;
+        }
+        header {
+            background-color: #fff;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        h1 {
+            margin: 0;
+            font-size: 2.5em;
+            color: #5a67d8;
+        }
+        main {
+            display: flex;
+            padding: 20px;
+        }
+        #products {
+            flex: 3;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        .product {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .product:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .product h3 {
+            margin: 0 0 10px;
+        }
+        .product p {
+            margin: 0 0 15px;
+            color: #666;
+        }
+        .product button {
+            background-color: #5a67d8;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .product button:hover {
+            background-color: #434190;
+        }
+        #cart {
+            flex: 1;
+            margin-left: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        #cart h2 {
+            margin: 0 0 20px;
+            text-align: center;
+        }
+        #cart-items {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 20px;
+        }
+        #cart-items li {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        #total {
+            font-weight: bold;
+            text-align: right;
+        }
+        #auth {
+            display: flex;
+            gap: 10px;
+        }
+        #auth input {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        #auth button {
+            background-color: #5a67d8;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        #auth button:hover {
+            background-color: #434190;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>ShopSphere</h1>
+        <div id="auth">
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button id="login-btn">Login</button>
+            <button id="register-btn">Register</button>
+        </div>
+    </header>
+    <main>
+        <div id="products"></div>
+        <aside id="cart">
+            <h2>Shopping Cart</h2>
+            <ul id="cart-items"></ul>
+            <div id="total">Total: $0.00</div>
+        </aside>
+    </main>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const productsContainer = document.getElementById('products');
+            const cartItemsContainer = document.getElementById('cart-items');
+            const totalElement = document.getElementById('total');
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const loginBtn = document.getElementById('login-btn');
+            const registerBtn = document.getElementById('register-btn');
+            let userId = null;
+
+            function renderProducts(products) {
+                productsContainer.innerHTML = '';
+                products.forEach(product => {
+                    const productElement = document.createElement('div');
+                    productElement.classList.add('product');
+                    productElement.innerHTML = `
+                        <h3>${product.name}</h3>
+                        <p>Category: ${product.category}</p>
+                        <p>Price: $${product.price.toFixed(2)}</p>
+                        <button data-id="${product.id}">Add to Cart</button>
+                    `;
+                    productElement.querySelector('button').addEventListener('click', () => {
+                        if (userId) {
+                            addToCart(product);
+                        } else {
+                            alert('Please log in to add items to your cart.');
+                        }
+                    });
+                    productsContainer.appendChild(productElement);
+                });
+            }
+
+            function addToCart(product) {
+                fetch('/api/cart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, product_id: product.id, quantity: 1 })
+                }).then(() => fetchCart());
+            }
+
+            function fetchCart() {
+                if (!userId) return;
+                fetch(`/api/cart?user_id=${userId}`)
+                    .then(response => response.json())
+                    .then(data => renderCart(data));
+            }
+
+            function renderCart(cart) {
+                cartItemsContainer.innerHTML = '';
+                let totalPrice = 0;
+                cart.forEach(item => {
+                    const cartItemElement = document.createElement('li');
+                    cartItemElement.innerHTML = `
+                        <span>${item.product.name} x${item.quantity}</span>
+                        <span>$${(item.product.price * item.quantity).toFixed(2)}</span>
+                    `;
+                    cartItemsContainer.appendChild(cartItemElement);
+                    totalPrice += item.product.price * item.quantity;
+                });
+                totalElement.textContent = `Total: $${totalPrice.toFixed(2)}`;
+            }
+
+            loginBtn.addEventListener('click', () => {
+                const username = usernameInput.value;
+                const password = passwordInput.value;
+                fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.user_id) {
+                        userId = data.user_id;
+                        alert('Login successful');
+                        fetchCart();
+                    } else {
+                        alert('Login failed');
+                    }
+                });
+            });
+
+            registerBtn.addEventListener('click', () => {
+                const username = usernameInput.value;
+                const password = passwordInput.value;
+                fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                }).then(() => alert('Registration successful. Please log in.'));
+            });
+
+            fetch('/api/products')
+                .then(response => response.json())
+                .then(data => renderProducts(data));
+        });
+    </script>
+</body>
+</html>

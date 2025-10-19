@@ -1,7 +1,5 @@
-# inventory.py
-# Creates a store inventory with categories and products
+from app import app, db, Product
 
-# Initialize inventory with 3 categories and 2 products each
 inventory = [
     {"category": "Fruit", "products": [
         {"name": "Apple", "price": 0.5, "quantity": 100},
@@ -17,8 +15,15 @@ inventory = [
     ]}
 ]
 
-# Filter products by category using list comprehension
-fruit_products = [p for category in inventory for p in category["products"] if category["category"] == "Fruit"]
-
-if __name__ == "__main__":
-    print(fruit_products)
+with app.app_context():
+    db.create_all()
+    for category in inventory:
+        for product_data in category['products']:
+            product = Product(
+                name=product_data['name'],
+                price=product_data['price'],
+                quantity=product_data['quantity'],
+                category=category['category']
+            )
+            db.session.add(product)
+    db.session.commit()
