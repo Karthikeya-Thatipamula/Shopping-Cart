@@ -67,6 +67,9 @@
         .product button:hover {
             background-color: #434190;
         }
+        .product button.added {
+            background-color: #48bb78;
+        }
         #cart {
             flex: 1;
             margin-left: 20px;
@@ -115,6 +118,18 @@
         #auth button:hover {
             background-color: #434190;
         }
+        .cart-item-controls {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .cart-item-controls button {
+            background-color: #ddd;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
         .loader {
             border: 16px solid #f3f3f3;
             border-radius: 50%;
@@ -132,17 +147,40 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        .notification.show {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
+    <div id="notification" class="notification"></div>
     <div class="loader" id="loader"></div>
     <header>
         <h1>ShopSphere</h1>
         <div id="auth">
-            <input type="text" id="username" placeholder="Username">
-            <input type="password" id="password" placeholder="Password">
-            <button id="login-btn">Login</button>
-            <button id="register-btn">Register</button>
+            <div id="login-form">
+                <input type="text" id="username" placeholder="Username">
+                <input type="password" id="password" placeholder="Password">
+                <button id="login-btn">Login</button>
+                <button id="register-btn">Register</button>
+            </div>
+            <div id="user-info" style="display: none;">
+                <span id="welcome-message"></span>
+                <button id="logout-btn">Logout</button>
+            </div>
         </div>
     </header>
     <main>
@@ -163,7 +201,31 @@
             const loginBtn = document.getElementById('login-btn');
             const registerBtn = document.getElementById('register-btn');
             const loader = document.getElementById('loader');
-            let userId = null;
+            const loginForm = document.getElementById('login-form');
+            const userInfo = document.getElementById('user-info');
+            const welcomeMessage = document.getElementById('welcome-message');
+            const logoutBtn = document.getElementById('logout-btn');
+            const notification = document.getElementById('notification');
+            let currentUser = null;
+
+            function showNotification(message) {
+                notification.textContent = message;
+                notification.classList.add('show');
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            }
+
+            function updateAuthUI() {
+                if (currentUser) {
+                    loginForm.style.display = 'none';
+                    userInfo.style.display = 'block';
+                    welcomeMessage.textContent = `Welcome, ${currentUser.username}!`;
+                } else {
+                    loginForm.style.display = 'block';
+                    userInfo.style.display = 'none';
+                }
+            }
 
             function showLoader() {
                 loader.style.display = 'block';
@@ -184,37 +246,68 @@
                         <p>Price: $${product.price.toFixed(2)}</p>
                         <button data-id="${product.id}">Add to Cart</button>
                     `;
-                    productElement.querySelector('button').addEventListener('click', () => {
-                        if (userId) {
-                            addToCart(product);
+                    const button = productElement.querySelector('button');
+                    button.addEventListener('click', () => {
+                        if (currentUser) {
+                            addToCart(product, button);
                         } else {
-                            alert('Please log in to add items to your cart.');
+                            showNotification('Please log in to add items to your cart.');
                         }
                     });
                     productsContainer.appendChild(productElement);
                 });
             }
 
-            function addToCart(product) {
+            function addToCart(product, button) {
+                button.classList.add('added');
+                setTimeout(() => {
+                    button.classList.remove('added');
+                }, 1000);
+
                 fetch('/api/cart', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId, product_id: product.id, quantity: 1 })
-                }).then(() => fetchCart())
+                    body: JSON.stringify({ product_id: product.id, quantity: 1 })
+            }).then(() => {
+                showNotification('Item added to cart!');
+                fetchCart();
+            })
                 .catch(error => {
                     console.error('Error adding to cart:', error);
-                    alert('Could not add to cart. Please try again later.');
+                showNotification('Could not add to cart. Please try again later.');
                 });
             }
 
             function fetchCart() {
-                if (!userId) return;
-                fetch(`/api/cart?user_id=${userId}`)
+                if (!currentUser) return;
+                fetch('/api/cart')
                     .then(response => response.json())
                     .then(data => renderCart(data))
                     .catch(error => {
                         console.error('Error fetching cart:', error);
-                        alert('Could not fetch cart. Please try again later.');
+                    showNotification('Could not fetch cart. Please try again later.');
+                    });
+            }
+
+            function removeItemFromCart(itemId) {
+                fetch(`/api/cart/${itemId}`, { method: 'DELETE' })
+                    .then(() => fetchCart())
+                    .catch(error => {
+                        console.error('Error removing item from cart:', error);
+                    showNotification('Could not remove item from cart. Please try again later.');
+                    });
+            }
+
+            function updateCartItemQuantity(itemId, quantity) {
+                fetch(`/api/cart/${itemId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ quantity })
+                })
+                    .then(() => fetchCart())
+                    .catch(error => {
+                        console.error('Error updating cart item:', error);
+                    showNotification('Could not update cart item. Please try again later.');
                     });
             }
 
@@ -224,13 +317,44 @@
                 cart.forEach(item => {
                     const cartItemElement = document.createElement('li');
                     cartItemElement.innerHTML = `
-                        <span>${item.product.name} x${item.quantity}</span>
+                        <span>${item.product.name}</span>
+                        <div class="cart-item-controls">
+                            <button class="quantity-decrease" data-id="${item.id}">-</button>
+                            <span>${item.quantity}</span>
+                            <button class="quantity-increase" data-id="${item.id}">+</button>
+                            <button class="remove-item" data-id="${item.id}">Remove</button>
+                        </div>
                         <span>$${(item.product.price * item.quantity).toFixed(2)}</span>
                     `;
                     cartItemsContainer.appendChild(cartItemElement);
                     totalPrice += item.product.price * item.quantity;
                 });
                 totalElement.textContent = `Total: $${totalPrice.toFixed(2)}`;
+
+                document.querySelectorAll('.quantity-decrease').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const itemId = e.target.dataset.id;
+                        const item = cart.find(i => i.id == itemId);
+                        if (item.quantity > 1) {
+                            updateCartItemQuantity(itemId, item.quantity - 1);
+                        }
+                    });
+                });
+
+                document.querySelectorAll('.quantity-increase').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const itemId = e.target.dataset.id;
+                        const item = cart.find(i => i.id == itemId);
+                        updateCartItemQuantity(itemId, item.quantity + 1);
+                    });
+                });
+
+                document.querySelectorAll('.remove-item').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const itemId = e.target.dataset.id;
+                        removeItemFromCart(itemId);
+                    });
+                });
             }
 
             loginBtn.addEventListener('click', () => {
@@ -243,18 +367,33 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-                    if (data.user_id) {
-                        userId = data.user_id;
-                        alert('Login successful');
+                    if (data.user) {
+                        currentUser = data.user;
+                        updateAuthUI();
                         fetchCart();
+                        showNotification('Login successful!');
                     } else {
-                        alert('Login failed');
+                        showNotification('Login failed');
                     }
                 })
                 .catch(error => {
                     console.error('Error logging in:', error);
-                    alert('Could not log in. Please try again later.');
+                    showNotification('Could not log in. Please try again later.');
                 });
+            });
+
+            logoutBtn.addEventListener('click', () => {
+                fetch('/api/logout', { method: 'POST' })
+                    .then(() => {
+                        currentUser = null;
+                        updateAuthUI();
+                        renderCart([]);
+                        showNotification('Logout successful!');
+                    })
+                    .catch(error => {
+                        console.error('Error logging out:', error);
+                        showNotification('Could not log out. Please try again later.');
+                    });
             });
 
             registerBtn.addEventListener('click', () => {
@@ -264,12 +403,22 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
-                }).then(() => alert('Registration successful. Please log in.'))
+                }).then(() => showNotification('Registration successful. Please log in.'))
                 .catch(error => {
                     console.error('Error registering:', error);
-                    alert('Could not register. Please try again later.');
+                    showNotification('Could not register. Please try again later.');
                 });
             });
+
+            fetch('/api/current_user')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.user) {
+                        currentUser = data.user;
+                        updateAuthUI();
+                        fetchCart();
+                    }
+                });
 
             showLoader();
             fetch('/api/products')
