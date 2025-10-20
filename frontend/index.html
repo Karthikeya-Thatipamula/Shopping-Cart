@@ -121,10 +121,16 @@
     <header>
         <h1>ShopSphere</h1>
         <div id="auth">
-            <input type="text" id="username" placeholder="Username">
-            <input type="password" id="password" placeholder="Password">
-            <button id="login-btn">Login</button>
-            <button id="register-btn">Register</button>
+            <div id="login-form">
+                <input type="text" id="username" placeholder="Username">
+                <input type="password" id="password" placeholder="Password">
+                <button id="login-btn">Login</button>
+                <button id="register-btn">Register</button>
+            </div>
+            <div id="user-info" style="display: none;">
+                <span id="welcome-message"></span>
+                <button id="logout-btn">Logout</button>
+            </div>
         </div>
     </header>
     <main>
@@ -145,7 +151,22 @@
             const passwordInput = document.getElementById('password');
             const loginBtn = document.getElementById('login-btn');
             const registerBtn = document.getElementById('register-btn');
-            let userId = null;
+            const loginForm = document.getElementById('login-form');
+            const userInfo = document.getElementById('user-info');
+            const welcomeMessage = document.getElementById('welcome-message');
+            const logoutBtn = document.getElementById('logout-btn');
+            let currentUser = null;
+
+            function updateAuthUI() {
+                if (currentUser) {
+                    loginForm.style.display = 'none';
+                    userInfo.style.display = 'block';
+                    welcomeMessage.textContent = `Welcome, ${currentUser.username}!`;
+                } else {
+                    loginForm.style.display = 'block';
+                    userInfo.style.display = 'none';
+                }
+            }
 
             function renderProducts(products) {
                 productsContainer.innerHTML = '';
@@ -159,7 +180,7 @@
                         <button data-id="${product.id}">Add to Cart</button>
                     `;
                     productElement.querySelector('button').addEventListener('click', () => {
-                        if (userId) {
+                        if (currentUser) {
                             addToCart(product);
                         } else {
                             alert('Please log in to add items to your cart.');
@@ -170,8 +191,8 @@
             }
 
             function fetchCart() {
-                if (!userId) return;
-                fetch(`/api/cart?user_id=${userId}`)
+                if (!currentUser) return;
+                fetch('/api/cart')
                     .then(response => response.json())
                     .then(data => renderCart(data));
             }
@@ -201,14 +222,23 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-                    if (data.user_id) {
-                        userId = data.user_id;
-                        alert('Login successful');
+                    if (data.user) {
+                        currentUser = data.user;
+                        updateAuthUI();
                         fetchCart();
                     } else {
                         alert('Login failed');
                     }
                 });
+            });
+
+            logoutBtn.addEventListener('click', () => {
+                fetch('/api/logout', { method: 'POST' })
+                    .then(() => {
+                        currentUser = null;
+                        updateAuthUI();
+                        renderCart([]);
+                    });
             });
 
             registerBtn.addEventListener('click', () => {
@@ -220,6 +250,16 @@
                     body: JSON.stringify({ username, password })
                 }).then(() => alert('Registration successful. Please log in.'));
             });
+
+            fetch('/api/current_user')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.user) {
+                        currentUser = data.user;
+                        updateAuthUI();
+                        fetchCart();
+                    }
+                });
 
             fetch('/api/products')
                 .then(response => response.json())
