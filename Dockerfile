@@ -18,4 +18,4 @@ COPY frontend/ ./frontend/
 EXPOSE 5001
 
 # Run the application with gunicorn, pointing to the app object in backend/app.py
-CMD ["sh", "-c", "python backend/seed.py && gunicorn --bind 0.0.0.0:5001 --chdir backend app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5001", "--chdir", "backend", "app:app"]
