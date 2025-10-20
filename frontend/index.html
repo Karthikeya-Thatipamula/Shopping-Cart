@@ -67,9 +67,6 @@
         .product button:hover {
             background-color: #434190;
         }
-        .product button.added {
-            background-color: #48bb78;
-        }
         #cart {
             flex: 1;
             margin-left: 20px;
@@ -118,107 +115,18 @@
         #auth button:hover {
             background-color: #434190;
         }
-        .cart-item-controls {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .cart-item-controls button {
-            background-color: #ddd;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .loader {
-            border: 16px solid #f3f3f3;
-            border-radius: 50%;
-            border-top: 16px solid #5a67d8;
-            width: 120px;
-            height: 120px;
-            animation: spin 2s linear infinite;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            margin-top: -60px;
-            margin-left: -60px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .notification {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #333;
-            color: #fff;
-            padding: 15px;
-            border-radius: 5px;
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.5s ease;
-        }
-        .notification.show {
-            opacity: 1;
-        }
-        #product-filters {
-            padding: 0 20px 20px 20px;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        #product-filters input,
-        #product-filters select {
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 1em;
-        }
-        #product-filters input {
-            flex-grow: 1;
-            max-width: 400px;
-        }
-        #product-filters button {
-            background-color: #5a67d8;
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-        #product-filters button:hover {
-            background-color: #434190;
-        }
     </style>
 </head>
 <body>
-    <div id="notification" class="notification"></div>
-    <div class="loader" id="loader"></div>
     <header>
         <h1>ShopSphere</h1>
         <div id="auth">
-            <div id="login-form">
-                <input type="text" id="username" placeholder="Username">
-                <input type="password" id="password" placeholder="Password">
-                <button id="login-btn">Login</button>
-                <button id="register-btn">Register</button>
-            </div>
-            <div id="user-info" style="display: none;">
-                <span id="welcome-message"></span>
-                <button id="logout-btn">Logout</button>
-            </div>
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button id="login-btn">Login</button>
+            <button id="register-btn">Register</button>
         </div>
     </header>
-    <div id="product-filters">
-        <input type="text" id="search-input" placeholder="Search products...">
-        <select id="category-select">
-            <option value="">All Categories</option>
-        </select>
-        <button id="clear-filters">Clear Filters</button>
-    </div>
     <main>
         <div id="products"></div>
         <aside id="cart">
@@ -227,6 +135,7 @@
             <div id="total">Total: $0.00</div>
         </aside>
     </main>
+    <script src="app.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const productsContainer = document.getElementById('products');
@@ -236,122 +145,35 @@
             const passwordInput = document.getElementById('password');
             const loginBtn = document.getElementById('login-btn');
             const registerBtn = document.getElementById('register-btn');
-            const loader = document.getElementById('loader');
-            const loginForm = document.getElementById('login-form');
-            const userInfo = document.getElementById('user-info');
-            const welcomeMessage = document.getElementById('welcome-message');
-            const logoutBtn = document.getElementById('logout-btn');
-            const notification = document.getElementById('notification');
-            const searchInput = document.getElementById('search-input');
-            const categorySelect = document.getElementById('category-select');
-            const clearFiltersBtn = document.getElementById('clear-filters');
-            let currentUser = null;
-
-            function showNotification(message) {
-                notification.textContent = message;
-                notification.classList.add('show');
-                setTimeout(() => {
-                    notification.classList.remove('show');
-                }, 3000);
-            }
-
-            function updateAuthUI() {
-                if (currentUser) {
-                    loginForm.style.display = 'none';
-                    userInfo.style.display = 'block';
-                    welcomeMessage.textContent = `Welcome, ${currentUser.username}!`;
-                } else {
-                    loginForm.style.display = 'block';
-                    userInfo.style.display = 'none';
-                }
-            }
-
-            function showLoader() {
-                loader.style.display = 'block';
-            }
-
-            function hideLoader() {
-                loader.style.display = 'none';
-            }
+            let userId = null;
 
             function renderProducts(products) {
                 productsContainer.innerHTML = '';
-                if (products.length === 0) {
-                    productsContainer.innerHTML = '<p>No products found.</p>';
-                    return;
-                }
                 products.forEach(product => {
                     const productElement = document.createElement('div');
                     productElement.classList.add('product');
                     productElement.innerHTML = `
-                        <h3>${product.name}</h3>
+                        <h3><a href="product.html?id=${product.id}">${product.name}</a></h3>
                         <p>Category: ${product.category}</p>
                         <p>Price: $${product.price.toFixed(2)}</p>
                         <button data-id="${product.id}">Add to Cart</button>
                     `;
-                    const button = productElement.querySelector('button');
-                    button.addEventListener('click', () => {
-                        if (currentUser) {
-                            addToCart(product, button);
+                    productElement.querySelector('button').addEventListener('click', () => {
+                        if (userId) {
+                            addToCart(product);
                         } else {
-                            showNotification('Please log in to add items to your cart.');
+                            alert('Please log in to add items to your cart.');
                         }
                     });
                     productsContainer.appendChild(productElement);
                 });
             }
 
-            function addToCart(product, button) {
-                button.classList.add('added');
-                setTimeout(() => {
-                    button.classList.remove('added');
-                }, 1000);
-
-                fetch('/api/cart', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ product_id: product.id, quantity: 1 })
-            }).then(() => {
-                showNotification('Item added to cart!');
-                fetchCart();
-            })
-                .catch(error => {
-                    console.error('Error adding to cart:', error);
-                showNotification('Could not add to cart. Please try again later.');
-                });
-            }
-
             function fetchCart() {
-                if (!currentUser) return;
-                fetch('/api/cart')
+                if (!userId) return;
+                fetch(`/api/cart?user_id=${userId}`)
                     .then(response => response.json())
-                    .then(data => renderCart(data))
-                    .catch(error => {
-                        console.error('Error fetching cart:', error);
-                    showNotification('Could not fetch cart. Please try again later.');
-                    });
-            }
-
-            function removeItemFromCart(itemId) {
-                fetch(`/api/cart/${itemId}`, { method: 'DELETE' })
-                    .then(() => fetchCart())
-                    .catch(error => {
-                        console.error('Error removing item from cart:', error);
-                    showNotification('Could not remove item from cart. Please try again later.');
-                    });
-            }
-
-            function updateCartItemQuantity(itemId, quantity) {
-                fetch(`/api/cart/${itemId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ quantity })
-                })
-                    .then(() => fetchCart())
-                    .catch(error => {
-                        console.error('Error updating cart item:', error);
-                    showNotification('Could not update cart item. Please try again later.');
-                    });
+                    .then(data => renderCart(data));
             }
 
             function renderCart(cart) {
@@ -360,44 +182,13 @@
                 cart.forEach(item => {
                     const cartItemElement = document.createElement('li');
                     cartItemElement.innerHTML = `
-                        <span>${item.product.name}</span>
-                        <div class="cart-item-controls">
-                            <button class="quantity-decrease" data-id="${item.id}">-</button>
-                            <span>${item.quantity}</span>
-                            <button class="quantity-increase" data-id="${item.id}">+</button>
-                            <button class="remove-item" data-id="${item.id}">Remove</button>
-                        </div>
+                        <span>${item.product.name} x${item.quantity}</span>
                         <span>$${(item.product.price * item.quantity).toFixed(2)}</span>
                     `;
                     cartItemsContainer.appendChild(cartItemElement);
                     totalPrice += item.product.price * item.quantity;
                 });
                 totalElement.textContent = `Total: $${totalPrice.toFixed(2)}`;
-
-                document.querySelectorAll('.quantity-decrease').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        const itemId = e.target.dataset.id;
-                        const item = cart.find(i => i.id == itemId);
-                        if (item.quantity > 1) {
-                            updateCartItemQuantity(itemId, item.quantity - 1);
-                        }
-                    });
-                });
-
-                document.querySelectorAll('.quantity-increase').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        const itemId = e.target.dataset.id;
-                        const item = cart.find(i => i.id == itemId);
-                        updateCartItemQuantity(itemId, item.quantity + 1);
-                    });
-                });
-
-                document.querySelectorAll('.remove-item').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        const itemId = e.target.dataset.id;
-                        removeItemFromCart(itemId);
-                    });
-                });
             }
 
             loginBtn.addEventListener('click', () => {
@@ -410,33 +201,14 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-                    if (data.user) {
-                        currentUser = data.user;
-                        updateAuthUI();
+                    if (data.user_id) {
+                        userId = data.user_id;
+                        alert('Login successful');
                         fetchCart();
-                        showNotification('Login successful!');
                     } else {
-                        showNotification('Login failed');
+                        alert('Login failed');
                     }
-                })
-                .catch(error => {
-                    console.error('Error logging in:', error);
-                    showNotification('Could not log in. Please try again later.');
                 });
-            });
-
-            logoutBtn.addEventListener('click', () => {
-                fetch('/api/logout', { method: 'POST' })
-                    .then(() => {
-                        currentUser = null;
-                        updateAuthUI();
-                        renderCart([]);
-                        showNotification('Logout successful!');
-                    })
-                    .catch(error => {
-                        console.error('Error logging out:', error);
-                        showNotification('Could not log out. Please try again later.');
-                    });
             });
 
             registerBtn.addEventListener('click', () => {
@@ -446,72 +218,12 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
-                }).then(() => showNotification('Registration successful. Please log in.'))
-                .catch(error => {
-                    console.error('Error registering:', error);
-                    showNotification('Could not register. Please try again later.');
-                });
+                }).then(() => alert('Registration successful. Please log in.'));
             });
 
-            fetch('/api/current_user')
+            fetch('/api/products')
                 .then(response => response.json())
-                .then(data => {
-                    if (data.user) {
-                        currentUser = data.user;
-                        updateAuthUI();
-                        fetchCart();
-                    }
-                });
-
-            function fetchProducts() {
-                showLoader();
-                const searchTerm = searchInput.value;
-                const category = categorySelect.value;
-                let url = `/api/products?`;
-                if (searchTerm) {
-                    url += `search=${searchTerm}&`;
-                }
-                if (category) {
-                    url += `category=${category}`;
-                }
-
-                fetch(url)
-                    .then(response => response.json())
-                    .then(data => {
-                        hideLoader();
-                        renderProducts(data);
-                    })
-                    .catch(error => {
-                        hideLoader();
-                        console.error('Error fetching products:', error);
-                        showNotification('Could not fetch products. Please try again later.');
-                    });
-            }
-
-            function fetchCategories() {
-                fetch('/api/categories')
-                    .then(response => response.json())
-                    .then(categories => {
-                        categories.forEach(category => {
-                            const option = document.createElement('option');
-                            option.value = category;
-                            option.textContent = category;
-                            categorySelect.appendChild(option);
-                        });
-                    });
-            }
-
-            searchInput.addEventListener('input', fetchProducts);
-            categorySelect.addEventListener('change', fetchProducts);
-
-            clearFiltersBtn.addEventListener('click', () => {
-                searchInput.value = '';
-                categorySelect.value = '';
-                fetchProducts();
-            });
-
-            fetchProducts();
-            fetchCategories();
+                .then(data => renderProducts(data));
         });
     </script>
 </body>

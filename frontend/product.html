@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Details - ShopSphere</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <script src="app.js"></script>
+    <div id="notification" class="notification"></div>
+    <div class="loader" id="loader" style="display: none;"></div>
+    <header>
+        <h1><a href="/">ShopSphere</a></h1>
+    </header>
+    <main>
+        <div id="product-detail-container"></div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const productContainer = document.getElementById('product-detail-container');
+            const loader = document.getElementById('loader');
+            const urlParams = new URLSearchParams(window.location.search);
+            const productId = urlParams.get('id');
+
+            function showLoader() {
+                loader.style.display = 'block';
+            }
+
+            function hideLoader() {
+                loader.style.display = 'none';
+            }
+
+            function renderProduct(product) {
+                productContainer.innerHTML = `
+                    <div class="product-detail">
+                        <img src="https://via.placeholder.com/400" alt="${product.name}">
+                        <div class="product-info">
+                            <h2>${product.name}</h2>
+                            <p><strong>Category:</strong> ${product.category}</p>
+                            <p class="price"><strong>Price:</strong> $${product.price.toFixed(2)}</p>
+                            <p><strong>Quantity available:</strong> ${product.quantity}</p>
+                            <button class="add-to-cart-btn" data-id="${product.id}">Add to Cart</button>
+                        </div>
+                    </div>
+                `;
+                const button = productContainer.querySelector('.add-to-cart-btn');
+                button.addEventListener('click', () => {
+                    // This relies on the global addToCart and showNotification functions from app.js
+                     fetch('/api/current_user')
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.user) {
+                                addToCart(product, button);
+                            } else {
+                                showNotification('Please log in to add items to your cart.');
+                            }
+                        });
+                });
+            }
+
+            if (!productId) {
+                productContainer.innerHTML = '<p>No product ID specified.</p>';
+                return;
+            }
+
+            showLoader();
+            fetch(`/api/products/${productId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Product not found');
+                    }
+                    return response.json();
+                })
+                .then(product => {
+                    hideLoader();
+                    renderProduct(product);
+                })
+                .catch(error => {
+                    hideLoader();
+                    console.error('Error fetching product:', error);
+                    productContainer.innerHTML = '<p>Error loading product details. Please try again later.</p>';
+                    // This relies on the global showNotification function from app.js
+                    showNotification('Could not fetch product details.');
+                });
+        });
+    </script>
+</body>
+</html>
