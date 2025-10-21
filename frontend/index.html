@@ -87,8 +87,22 @@
         #cart-items li {
             display: flex;
             justify-content: space-between;
+            align-items: center;
             padding: 10px 0;
             border-bottom: 1px solid #eee;
+        }
+        .remove-from-cart-btn {
+            background-color: #e53e3e;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.2s;
+        }
+        .remove-from-cart-btn:hover {
+            background-color: #c53030;
         }
         #total {
             font-weight: bold;
@@ -241,13 +255,35 @@
                 cart.forEach(item => {
                     const cartItemElement = document.createElement('li');
                     cartItemElement.innerHTML = `
-                        <span>${item.product.name} x${item.quantity}</span>
-                        <span>$${(item.product.price * item.quantity).toFixed(2)}</span>
+                        <div>
+                            <span>${item.product.name} x${item.quantity}</span>
+                            <span> - $${(item.product.price * item.quantity).toFixed(2)}</span>
+                        </div>
+                        <button class="remove-from-cart-btn" data-product-id="${item.product.id}">Remove</button>
                     `;
                     cartItemsContainer.appendChild(cartItemElement);
                     totalPrice += item.product.price * item.quantity;
                 });
                 totalElement.textContent = `Total: $${totalPrice.toFixed(2)}`;
+
+                document.querySelectorAll('.remove-from-cart-btn').forEach(button => {
+                    button.addEventListener('click', () => {
+                        const productId = button.dataset.productId;
+                        removeFromCart(productId);
+                    });
+                });
+            }
+
+            function removeFromCart(productId) {
+                fetch(`/api/cart/${productId}`, { method: 'DELETE' })
+                    .then(response => {
+                        if (response.ok) {
+                            showNotification('Item removed from cart');
+                            fetchCart();
+                        } else {
+                            showNotification('Error removing item from cart');
+                        }
+                    });
             }
 
             loginBtn.addEventListener('click', () => {

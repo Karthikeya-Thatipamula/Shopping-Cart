@@ -31,6 +31,7 @@ class Product(db.Model):
     price = db.Column(db.Float, nullable=False)
     quantity = db.Column(db.Integer, nullable=False)
     category = db.Column(db.String(80), nullable=False)
+    image_url = db.Column(db.String(255), nullable=True)
 
     def to_dict(self):
         return {
@@ -38,7 +39,8 @@ class Product(db.Model):
             'name': self.name,
             'price': self.price,
             'quantity': self.quantity,
-            'category': self.category
+            'category': self.category,
+            'image_url': self.image_url
         }
 
 class User(UserMixin, db.Model):
@@ -124,10 +126,29 @@ def get_cart():
 @login_required
 def add_to_cart():
     data = request.get_json()
-    cart_item = CartItem(user_id=current_user.id, product_id=data['product_id'], quantity=data['quantity'])
-    db.session.add(cart_item)
+    product_id = data['product_id']
+    quantity = data['quantity']
+
+    cart_item = CartItem.query.filter_by(user_id=current_user.id, product_id=product_id).first()
+
+    if cart_item:
+        cart_item.quantity += quantity
+    else:
+        cart_item = CartItem(user_id=current_user.id, product_id=product_id, quantity=quantity)
+        db.session.add(cart_item)
+
     db.session.commit()
     return jsonify({'message': 'Item added to cart'})
+
+@app.route('/api/cart/<int:product_id>', methods=['DELETE'])
+@login_required
+def remove_from_cart(product_id):
+    cart_item = CartItem.query.filter_by(user_id=current_user.id, product_id=product_id).first()
+    if cart_item:
+        db.session.delete(cart_item)
+        db.session.commit()
+        return jsonify({'message': 'Item removed from cart'})
+    return jsonify({'message': 'Item not found in cart'}), 404
 
 @app.route('/')
 def serve_frontend():
