@@ -347,13 +347,20 @@
 
             showLoader();
             fetch('/api/products')
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     renderProducts(data);
-                    hideLoader();
                 })
                 .catch(error => {
                     console.error('Error fetching products:', error);
+                    productsContainer.innerHTML = '<p>Error loading products. Please try again later.</p>';
+                })
+                .finally(() => {
                     hideLoader();
                 });
         });

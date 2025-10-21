@@ -17,5 +17,5 @@ COPY frontend/ ./frontend/
 # Make port 5001 available to the world outside this container
 EXPOSE 5001
 
-# Run the application with gunicorn, pointing to the app object in backend/app.py
-CMD ["gunicorn", "--bind", "0.0.0.0:5001", "--chdir", "backend", "app:app"]
+# Run the database initialization script, seed the database, and then start the application
+CMD python backend/init_db.py && python backend/seed.py && gunicorn --bind 0.0.0.0:5001 --chdir backend app:app
